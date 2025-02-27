@@ -124,7 +124,7 @@ class EnSet extends Set {
         if (typeof fn !== "function") throw new TypeError("replace() argument must be a function");
 
         const values = this.find(fn);
-        return values.length !== 0 ? values.map(v => this.replace(v, newValue)) : null;
+        return !values.length ? values.map(v => this.replace(v, newValue)) : null;
     }
 
     /**

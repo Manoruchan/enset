@@ -115,6 +115,19 @@ class EnSet extends Set {
     }
 
     /**
+     * Replaces all values found by a function.
+     * @param {(value: any) => boolean} fn
+     * @param {*} newValue
+     * @returns {Array} Values before edit or null
+     */
+    replaceAll(fn, newValue) {
+        if (typeof fn !== "function") throw new TypeError("replace() argument must be a function");
+
+        const values = this.find(fn);
+        return values.length !== 0 ? values.map(v => this.replace(v, newValue)) : null;
+    }
+
+    /**
      * Removes values that match the function.
      * @param {(value: any) => boolean} fn
      * @returns {Array} Removed values

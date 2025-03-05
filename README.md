@@ -23,7 +23,7 @@ console.log(enset.values());
 
 enset.delete();  // Do nothing
 console.log(enset.values());
-// [ { age: 30 } ]
+// [ { age: 30, active: true } ]
 
 enset.clear();  
 console.log(enset.values());

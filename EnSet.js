@@ -1,5 +1,7 @@
 const __isObject = value => Object.prototype.toString.call(value) === "[object Object]";
 const __objectEquals = (obj1, obj2) => {
+    if (!(__isObject(obj1) && __isObject(obj2))) return false;
+
     const k1 = Object.keys(obj1);
     const k2 = Object.keys(obj2);
 
@@ -15,147 +17,101 @@ const __objectEquals = (obj1, obj2) => {
 /**
  * Enhanced Set
  *
- * Additional methods for operating objects in Set.
+ * Collection for objects with StreamAPI like methods
  */
-class EnSet extends Set {
+module.exports = class EnSet {
     /**
-     * @param {Array} array
+     * @param {object[]} initialValues
      */
-    constructor(array) {
-        if (!Array.isArray(array)) throw new TypeError("EnSet constructor expects an array");
-        super();
-        this.add(...array);
+    constructor(initialValues) {
+        if (!Array.isArray(initialValues)) throw new TypeError(`${initialValues} is not an array`);
+        if (!initialValues.every(v => __isObject(v))) throw new TypeError(`${initialValues} contains non-object value`);
+
+        /** @type {object[]} */
+        this._items = [...initialValues];
+        /** @type {EnSet} */
+        this._parent = null;
     }
 
     /**
-     * @override
-     * @param  {...any} value
+     * Adds values
+     * @param  {...object} value
      * @returns {this}
      */
     add(...value) {
-        value.forEach(v => {
-            if (!this.has(v)) super.add(v);
-        });
+        const target = this._parent || this;
+        value.forEach(v => !target.has(v) ? target._items.push(v) : null);
         return this;
     }
 
-    /**
-     * @override
-     * @param {*} value
-     * @returns {boolean}
-     */
-    delete(value) {
-        if (!this.has(value)) return false;
-        if (!__isObject(value)) return super.delete(value);
+    clear() {
+        this._items = [];
+    }
 
-        // Store only non-matching values
-        const remainingValues = Array.from(this).filter(v => !(__isObject(v) && __objectEquals(v, value)));
-        const initialSize = this.size;
+    delete(...value) {
+        const target = this._parent || this;
 
-        this.clear();
-        this.add(...remainingValues); // Re-add remaining values
-
-        return this.size !== initialSize;
+        value.length && this._parent
+            ? (target._items = target._items.filter(val => !this._items.some(v => __objectEquals(v, val))))
+            : (target._items = target._items.filter(val => !value.some(v => __objectEquals(v, val))));
     }
 
     /**
-     * Finds objects in Set.
-     * @param {(value: object) => boolean} fn
-     * @returns {object[]}
-     */
-    find(fn) {
-        if (typeof fn !== "function") throw new TypeError("find() argument must be a function");
-        return Array.from(this).filter(v => __isObject(v) && fn(v));
-    }
-
-    /**
-     * @override
-     * @param {*} value
+     * @param {object} value
      * @returns {boolean}
      */
     has(value) {
-        return __isObject(value)
-            ? Array.from(this).some(v => __isObject(v) && __objectEquals(v, value))
-            : super.has(value);
+        if (!__isObject(value)) throw new TypeError(`${value} is not an object`);
+        return this._items.some(v => __objectEquals(v, value));
     }
 
     /**
      * @returns {boolean}
      */
     isEmpty() {
-        return this.size === 0;
+        return this._items.length === 0;
     }
 
     /**
-     * Replaces a specific value.
-     * @param {*} value
-     * @param {*} newValue
-     * @returns {*} Value before edit or null
+     * @param {(value: object, array: object[]) => any} fn
+     * @returns {object[]}
      */
-    replace(value, newValue) {
-        if (this.has(value)) {
-            this.delete(value);
-            this.add(newValue);
-            return value;
-        }
-        return null;
+    map(fn) {
+        if (typeof fn !== "function") throw new TypeError(`${fn} is not a function`);
+        return this._items.map((v, _, arr) => fn(v, arr));
     }
 
     /**
-     * Replaces value found by a function.
-     * @param {(value: any) => boolean} fn
-     * @param {*} newValue
-     * @returns {*} Value before edit or null
+     * @param {(value: any, array: object[]) => boolean} fn
+     * @returns {this}
      */
-    replace(fn, newValue) {
-        if (typeof fn !== "function") throw new TypeError("replace() argument must be a function");
-
-        const value = this.find(fn)[0];
-        return value ? this.replace(value, newValue) : null;
+    query(fn) {
+        const selected = new this.constructor(this._items.filter((v, _, arr) => fn(v, arr)));
+        selected._parent = this._parent || this;
+        return  selected;
     }
 
     /**
-     * Replaces all values found by a function.
-     * @param {(value: any) => boolean} fn
-     * @param {*} newValue
-     * @returns {Array} Values before edit or null
+     * @returns {number}
      */
-    replaceAll(fn, newValue) {
-        if (typeof fn !== "function") throw new TypeError("replace() argument must be a function");
-
-        const values = this.find(fn);
-        return !values.length ? values.map(v => this.replace(v, newValue)) : null;
+    size() {
+        return this._items.length;
     }
 
     /**
-     * Removes values that match the function.
-     * @param {(value: any) => boolean} fn
-     * @returns {Array} Removed values
+     * @param {(value: object, array: object[]) => any} fn
+     * @returns {this}
      */
-    sweep(fn) {
-        if (typeof fn !== "function") throw new TypeError("sweep() argument must be a function");
-
-        const values = this.find(fn);
-        values.forEach(v => this.delete(v));
-        return values;
+    update(fn) {
+        if (typeof fn !== "function") throw new TypeError(`${fn} is not a function`);
+        this._items.forEach((v, _, arr) => fn(v, arr));
+        return this;
     }
 
     /**
-     * @returns {Array}
+     * @returns {object[]}
      */
-    toArray() {
-        return [...this];
-    }
-
-    /**
-     * @override
-     * @param {Set} other
-     * @returns {EnSet}
-     */
-    union(other) {
-        if (!(other instanceof EnSet)) throw TypeError("union() argument must be an instance of EnSet");
-        return new this.constructor([...this, ...other]);
+    values() {
+        return this._items;
     }
 }
-
-module.exports = EnSet;

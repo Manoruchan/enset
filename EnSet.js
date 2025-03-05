@@ -51,7 +51,7 @@ module.exports = class EnSet {
     delete(...value) {
         const target = this._parent || this;
 
-        value.length && this._parent
+        !value.length && this._parent
             ? (target._items = target._items.filter(val => !this._items.some(v => __objectEquals(v, val))))
             : (target._items = target._items.filter(val => !value.some(v => __objectEquals(v, val))));
     }

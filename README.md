@@ -17,7 +17,7 @@ enset.query(v => v.age > 18).update(v => (v.active = true));
 console.log(enset.values());
 // [ { age: 25, active: true }, { age: 15 }, { age: 30, active: true }, { age: 37, active: true } ]
 
-enset.query(v => v.age > 30).delete();
+enset.query(v => v.age >= 30).delete();
 console.log(enset.values());
 // [ { age: 30, active: true }, { age: 37, active: true } ]
 
